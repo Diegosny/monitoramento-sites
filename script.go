@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 )
+
+//Constantes
+const tempoMonitoramento = 3
 
 func main() {
 	for {
 		exibiMenu()
-
 		comando := opcao()
-
 		switch comando {
 		case 1:
 			monitoramento()
@@ -46,32 +48,47 @@ func monitoramento() {
 	fmt.Println("********** MONITORANDO SITES ************")
 	fmt.Println("")
 
-	var op string
+	var tamanhoArray int
+	sites := []string{}
+	var nomeSite string
+	var url string
 
-	fmt.Println("Digite o dominio do site (ex: google)")
+	fmt.Println("Quantos sites deseja monitorar?")
+	fmt.Scan(&tamanhoArray)
 
-	fmt.Scan(&op)
+	for i := 0; i < tamanhoArray; i++ {
+		fmt.Print("Digite o dominio do site (ex: google): ")
+		fmt.Scan(&nomeSite)
+		url = "https://" + nomeSite + ".com.br"
+		sites = append(sites, url)
+	}
 
-	site := "https://" + op + ".com.br"
+	fmt.Println("")
+	for j := 0; j < len(sites); j++ {
+		response, _ := http.Get(sites[j])
 
-	fmt.Println(site)
+		fmt.Println("Site:", sites[j], ",status:", response.StatusCode, ",id:", j+1)
+		verificaStatus(response.StatusCode)
+		fmt.Println("-------------------------------------")
+		time.Sleep(tempoMonitoramento * time.Second)
+	}
+}
 
-	response, _ := http.Get(site)
-
-	switch response.StatusCode {
+func verificaStatus(status int) {
+	switch status {
 	case 200:
-		fmt.Println("Site no ar:", response.StatusCode)
+		fmt.Println("Site no ar:", status)
 
 	case 400:
-		fmt.Println("Site não encontrado, status:", response.StatusCode)
+		fmt.Println("Site não encontrado, status:", status)
 
 	case 403:
-		fmt.Println("Sem permisão, status:", response.StatusCode)
+		fmt.Println("Sem permisão, status:", status)
 
 	case 500:
-		fmt.Println("Erro interno, status:", response.StatusCode)
+		fmt.Println("Erro interno, status:", status)
 
 	case 404:
-		fmt.Println("Site não encontrado, status", response.StatusCode)
+		fmt.Println("Site não encontrado, status", status)
 	}
 }
