@@ -1,94 +1,137 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
-//Constantes
-const tempoMonitoramento = 3
+const monitoramentos = 2
+const delay = 2
 
 func main() {
 	for {
-		exibiMenu()
-		comando := opcao()
+		exibeMenu()
+		comando := leComando()
+
 		switch comando {
 		case 1:
-			monitoramento()
-			fmt.Println("")
+			iniciarMonitoramento()
 		case 2:
-			fmt.Println("***** LOGS *****")
+			//Chamando aqui
+			fmt.Println("Exibindo Logs...")
+			imprimeLogs()
 		case 0:
-			fmt.Println("Saiu")
+			fmt.Println("Saindo do programa")
 			os.Exit(0)
 		default:
-			fmt.Println("Opção invalida")
+			fmt.Println("Não conheço este comando")
 			os.Exit(-1)
 		}
 	}
 }
 
-func exibiMenu() {
-	fmt.Println("********** MENU ************")
-	fmt.Println("1) Iniciar monitoramento")
-	fmt.Println("2) Exibir os logs")
-	fmt.Println("0) Sair do programa")
+func exibeMenu() {
+	fmt.Println("1- Iniciar Monitoramento")
+	fmt.Println("2- Exibir Logs")
+	fmt.Println("0- Sair do Programa")
 }
 
-func opcao() int {
-	var comando int
-	fmt.Scan(&comando)
-
-	return comando
-}
-
-func monitoramento() {
-	fmt.Println("********** MONITORANDO SITES ************")
+func leComando() int {
+	var comandoLido int
+	fmt.Scan(&comandoLido)
+	fmt.Println("O comando escolhido foi", comandoLido)
 	fmt.Println("")
 
-	var tamanhoArray int
-	sites := []string{}
-	var nomeSite string
-	var url string
+	return comandoLido
+}
 
-	fmt.Println("Quantos sites deseja monitorar?")
-	fmt.Scan(&tamanhoArray)
+func iniciarMonitoramento() {
+	fmt.Println("Monitorando...")
 
-	for i := 0; i < tamanhoArray; i++ {
-		fmt.Print("Digite o dominio do site (ex: google): ")
-		fmt.Scan(&nomeSite)
-		url = "https://" + nomeSite + ".com.br"
-		sites = append(sites, url)
+	sites := leSitesDoArquivo()
+
+	for i := 0; i < monitoramentos; i++ {
+		for i, site := range sites {
+			fmt.Println("Testando site", i, + 1 ":", site)
+			testaSite(site)
+		}
+		time.Sleep(delay * time.Second)
+		fmt.Println("")
 	}
 
 	fmt.Println("")
-	for j := 0; j < len(sites); j++ {
-		response, _ := http.Get(sites[j])
+}
 
-		fmt.Println("Site:", sites[j], ",status:", response.StatusCode, ",id:", j+1)
-		verificaStatus(response.StatusCode)
-		fmt.Println("-------------------------------------")
-		time.Sleep(tempoMonitoramento * time.Second)
+func testaSite(site string) {
+	resp, err := http.Get(site)
+
+	if err != nil {
+		fmt.Println("Ocorreu um erro:", err)
+	}
+
+	if resp.StatusCode == 200 {
+		fmt.Println("Site:", site, "foi carregado com sucesso!")
+		registraLog(site, true)
+	} else {
+		fmt.Println("Site:", site, "está com problemas. Status Code:", resp.StatusCode)
+		registraLog(site, false)
 	}
 }
 
-func verificaStatus(status int) {
-	switch status {
-	case 200:
-		fmt.Println("Site no ar:", status)
+func leSitesDoArquivo() []string {
 
-	case 400:
-		fmt.Println("Site não encontrado, status:", status)
+	var sites []string
 
-	case 403:
-		fmt.Println("Sem permisão, status:", status)
+	arquivo, err := os.Open("sites.txt")
 
-	case 500:
-		fmt.Println("Erro interno, status:", status)
-
-	case 404:
-		fmt.Println("Site não encontrado, status", status)
+	if err != nil {
+		fmt.Println("Ocorreu um erro:", err)
 	}
+
+	leitor := bufio.NewReader(arquivo)
+	for {
+		linha, err := leitor.ReadString('\n')
+		linha = strings.TrimSpace(linha)
+
+		sites = append(sites, linha)
+
+		if err == io.EOF {
+			break
+		}
+
+	}
+
+	arquivo.Close()
+
+	return sites
+}
+
+func imprimeLogs() {
+
+	arquivo, err := ioutil.ReadFile("log.txt")
+
+	if err != nil {
+		fmt.Println("Ocorreu um erro:", err)
+	}
+
+	fmt.Println(string(arquivo))
+}
+
+func registraLog(site string, status bool) {
+
+	arquivo, err := os.OpenFile("log.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+
+	if err != nil {
+		fmt.Println("Ocorreu um erro:", err)
+	}
+	arquivo.WriteString(time.Now().Format("02/01/2006 15:04:05") + " - " + site + " - online: " + strconv.FormatBool(status) + "\n")
+
+	arquivo.Close()
 }

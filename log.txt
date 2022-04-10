@@ -1,0 +1,4 @@
+10/04/2022 09:43:39 - https://google.com.br - online: true
+10/04/2022 09:43:50 - https://facebook.com - online: true
+10/04/2022 09:43:55 - https://google.com.br - online: true
+10/04/2022 09:43:55 - https://facebook.com - online: true
